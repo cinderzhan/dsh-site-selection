@@ -12,7 +12,7 @@ import { DATASETS } from './datasets.js'
 import { siteFromListing } from './market.js'
 
 export const name = 'dsh-site-selection'
-export const inject = ['webServer']
+export const inject = ['webServer', 'connection']
 
 const ROOT = dirname(fileURLToPath(import.meta.url))
 const PUBLIC = join(ROOT, '..', 'public')
@@ -1098,7 +1098,11 @@ export function apply(ctx) {
   for (const path of routes) {
     ctx.effect(() => ctx.webServer.register({
       kind: 'exact', path,
-      handler: (req, res) => handleApi(req, res).catch(error => json(res, 500, { error: error instanceof Error ? error.message : String(error) })),
+      handler: (req, res) => {
+        const rejection = ctx.connection?.requestRejection?.(req)
+        if (!ctx.connection?.requestRejection || rejection !== undefined) return json(res, rejection || 403, { error: 'Authentication required' })
+        return handleApi(req, res).catch(error => json(res, 500, { error: error instanceof Error ? error.message : String(error) }))
+      },
     }), `dsh-site-selection: ${path}`)
   }
 }

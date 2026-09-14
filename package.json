@@ -1,6 +1,6 @@
 {
   "name": "dsh-site-selection",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "门店选址工作台 —— DSH (DeepSeek Harness) 插件：在真实三维城市地图上点任意位置立刻得到选址分析，按你的口头要求批量找点位，踩点后回填，DSH 全程读得懂当前选中的点位。地理数据来自 OpenStreetMap。",
   "keywords": [
     "deepseek",
@@ -38,7 +38,8 @@
     "cordis.patch.yml",
     "README.md",
     "LICENSE",
-    "DATA-LICENSE.md"
+    "DATA-LICENSE.md",
+    "workbench.json"
   ],
   "engines": {
     "node": ">=20"
@@ -56,9 +57,8 @@
     "client": {
       "platform": "web",
       "inject": [
-        "@deepseek-ai/dsh-client-ui-slots",
+        "dsh-desktop-workbenches",
         "@deepseek-ai/dsh-client-ui-conversation",
-        "@deepseek-ai/dsh-client-ui-layout",
         "@deepseek-ai/dsh-api-session-controller"
       ]
     }

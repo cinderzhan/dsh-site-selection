@@ -1,9 +1,4 @@
-# dsh-site-selection bundle patch.
-#
-# Unlike a sidebar-replacing plugin, this one is a good citizen: it contributes
-# one entry to the `sidebar.footer.action` list slot and one to `shell.overlay`,
-# both via `slots.inject`, so it composes with whatever owns the sidebar and
-# needs no `ui-sidebar` disable.
+# Desktop owns workbench mounting and navigation.
 - insert:
     - id: site-selection
       name: dsh-site-selection

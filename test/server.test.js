@@ -223,7 +223,7 @@ test('the panel follows the active conversation instead of one global project', 
   assert.ok(!/sessions\?\.selection\?\.sessionId/.test(client),
     'sessions.selection must not be used as the active-session signal')
   // The guard is the point: an unrelated conversation must not blank the panel.
-  assert.match(client, /if \(slug && slug !== openState\.project\) setOpen/,
+  assert.match(client, /if \(active\(\) && slug && slug !== openState\.project\)/,
     'only switch when the session maps to a project')
 })
 

@@ -175,3 +175,11 @@ npm run market        # 重新生成模拟商业数据
 
 `src/data/` 下的地理数据是 OpenStreetMap 衍生数据库，**ODbL 1.0，具有传染性**——
 © OpenStreetMap contributors。对外分发或商业化前请读 [DATA-LICENSE.md](./DATA-LICENSE.md)。
+
+## Desktop 工作台适配（1.2.0）
+
+本版本从 GitHub 原版适配。业务表单、地图、评分和开场提示词保持原样；通过 `desktopWorkbenches.register` 挂载，不再覆盖外壳或另外注册侧栏按钮。需要支持 `ensureSession` 的 Desktop 工作台宿主。
+
+创建／打开项目立即显示业务面板，然后以原有项目目录调用宿主 `ensureSession({workbenchId, folder, sessionId})` 自动创建或恢复原生工作区、会话，将关联保存到 `project.json`。新会话填入原有开场草稿，保留已有文字，仍由用户发送。初始化失败时项目面板保留，重新选择项目即可重试。切换期间不向其他会话写入；删除业务项目不自动删除可能共享的原生工作区。
+
+包版本可本地验收；不代表已经通过官方市场审核。
