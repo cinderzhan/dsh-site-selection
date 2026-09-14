@@ -3,7 +3,7 @@
   "id": "site-selection",
   "title": "门店选址",
   "description": "三维城市地图、点位评分、铺源比较与踩点记录。",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "entry": "./lib/client.js",
   "compatibility": {
     "desktopWorkbenches": "^0.1.0",

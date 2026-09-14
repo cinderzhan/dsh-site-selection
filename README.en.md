@@ -23,7 +23,7 @@ Requires DSH Desktop with the local workbench market (desktopWorkbenches 0.1.x a
 
 The business panel occupies 65% on the left and the native conversation remains the single Agent input. Public navigation, settings, modes, models, tools and permissions stay under Desktop and the current native session. The plugin never creates or opens sessions and never changes DSH workspace membership.
 
-Create a session through Desktop first, then select a business project. A business project is independent of a native workspace folder. Several sessions can share a business project; each session remembers its own selection in `.desktop-session-projects.json` in the data root. Legacy project.sessionId is a selection hint only and cannot revive old sessions or workspaces.
+Open the workbench to select, create and edit a business project immediately. Create a native session in the conversation area only when requesting Agent help. A business project is independent of a native workspace folder. Several sessions can share a business project; each session remembers its own selection in `.desktop-session-projects.json` in the data root. Without a session, the last business selection is stored in localStorage for the current Desktop origin. A new session inherits that selection; explicit existing session mappings take precedence. Legacy project.sessionId is a selection hint only and cannot revive old sessions or workspaces.
 
 Switching workbenches or sessions preserves mounted business iframes. Only messages from the active owned session and its exact same-origin frame can append to the native draft, without replacing text or sending it. Save business form changes before leaving the entire workbench page or restarting.
 

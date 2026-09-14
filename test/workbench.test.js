@@ -6,7 +6,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Readable } from 'node:stream'
 
-async function client() {
+async function client(storage = new Map()) {
+  const posts = []
   let plugin, current = 's1', draft = '已有草稿', pending, occurrences = []
   const effects = [], callbacks = [], frameWindow = {}
   const state = { active: 'site-selection', added: ['site-selection'], sessionBindings: { s1: 'site-selection', s2: 'site-selection', other: 'another' } }
@@ -19,14 +20,15 @@ async function client() {
   vm.runInNewContext(await readFile(new URL('../lib/client.js', import.meta.url), 'utf8'), {
     window: { location: { origin }, __ModuleLoader__: { load: spec => { plugin = spec.factory(() => ({ createElement() {} })) } } },
     document: { createElement: () => ({ dataset: {}, remove() {} }), head: { appendChild() {} } },
+    localStorage: { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },
     fetch: async (path, options) => {
-      if (options) { if (pending) await pending; return { ok: true, json: async () => ({}) } }
+      if (options) { posts.push({ path, body: JSON.parse(options.body) }); if (pending) await pending; return { ok: true, json: async () => ({}) } }
       return { ok: true, json: async () => ({ bindings: { s1: 'project-a', s2: 'project-b' } }) }
     },
   })
   plugin.apply(ctx)
   await new Promise(resolve => setImmediate(resolve))
-  return { plugin, state, frame: { contentWindow: frameWindow }, event: { origin, source: frameWindow, data: { project: 'project-a' } }, draft: () => draft, chips: () => { occurrences = [{}] },
+  return { plugin, state, storage, posts, frame: { contentWindow: frameWindow }, event: { origin, source: frameWindow, data: { project: 'project-a' } }, draft: () => draft, chips: () => { occurrences = [{}] },
     switch: id => { current = id; callbacks.forEach(cb => cb()) }, defer: promise => { pending = promise } }
 }
 
@@ -71,7 +73,9 @@ test('project selection cannot change the session after an async navigation race
   c.switch('s1')
   assert.equal(c.plugin.acceptedMessage({ ...e, data: { project: 'project-c' } }, c.frame, 's1', 'project-c'), true)
   c.switch('other')
-  await assert.rejects(c.plugin.openProject('project-a'), /Desktop/)
+  await c.plugin.openProject('project-a')
+  assert.equal(c.plugin.businessMessage(c.event, c.frame, null, 'project-a'), true)
+  assert.equal(c.plugin.acceptedMessage(c.event, c.frame, null, 'project-a'), false)
 })
 
 const root = await mkdtemp(join(tmpdir(), 'site-workbench-'))
@@ -114,4 +118,31 @@ test('every registered route uses connection authentication, including assets', 
     await route.handler({}, { writeHead(code) { status = code }, end() {} })
     assert.equal(status, 401)
   }
+})
+
+test('business selection works without a session, survives reload and keeps session mappings', async () => {
+  const c = await client(); c.switch(null)
+  await c.plugin.openProject('project-free')
+  const event = { ...c.event, data: { project: 'project-free' } }
+  assert.equal(c.plugin.businessMessage(event, c.frame, null, 'project-free'), true)
+  assert.equal(c.posts.length, 0)
+  assert.equal(c.plugin.acceptedMessage(event, c.frame, null, 'project-free'), false)
+  assert.throws(() => c.plugin.fillDraft(null, 'not allowed'), /切换/)
+  c.state.sessionBindings.fresh = 'site-selection'; c.switch('fresh')
+  assert.equal(c.plugin.acceptedMessage(event, c.frame, 'fresh', 'project-free'), true)
+  assert.deepEqual(c.posts[0].body, { sessionId: 'fresh', project: 'project-free' })
+  c.switch('s1')
+  assert.equal(c.plugin.acceptedMessage(c.event, c.frame, 's1', 'project-a'), true)
+  c.switch(null)
+  assert.equal(c.plugin.businessMessage(event, c.frame, null, 'project-free'), true)
+  const reloaded = await client(c.storage); reloaded.switch(null)
+  assert.equal(reloaded.plugin.businessMessage({ ...reloaded.event, data: { project: 'project-free' } }, reloaded.frame, null, 'project-free'), true)
+  reloaded.state.active = 'other'
+  assert.equal(reloaded.plugin.businessMessage({ ...reloaded.event, data: { project: 'project-free' } }, reloaded.frame, null, 'project-free'), false)
+})
+test('business creation and iframe visibility do not require a native session', async () => {
+  const source = await readFile(new URL('../lib/client.js', import.meta.url), 'utf8')
+  const create = source.slice(source.indexOf('    const submitCreate ='), source.indexOf("    return h('section'"))
+  assert.doesNotMatch(create, /ownedSession|sessionId/)
+  assert.match(source, /display: key === frameKey \? 'block' : 'none'/)
 })
