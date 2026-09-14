@@ -690,3 +690,37 @@ h1{margin:3px 0 0;font-size:13px;font-weight:600;white-space:nowrap;overflow:hid
   0%{background:var(--accent-soft);box-shadow:0 0 0 2px var(--accent)}
   60%{background:var(--accent-soft);box-shadow:0 0 0 2px var(--accent)}
   100%{background:transparent;box-shadow:0 0 0 0 transparent}}
+
+
+/* Compact workbench iframe: drawers overlay the map instead of reducing it to
+   a narrow strip. Above 760px all original desktop columns remain unchanged. */
+@media (max-width:760px){
+  .topbar{min-height:36px;gap:6px;padding:4px 8px;flex-wrap:wrap}
+  .topbar h1.ctx{flex:1;min-width:80px;max-width:none}
+  .topbar .spacer{display:none}
+  .topbar .sync{margin-left:0;font-size:9px}
+  .topbar .bind{font-size:9px;white-space:nowrap}
+  .topbar .button{height:26px;padding:0 7px}
+  .workspace{position:relative;padding:0 16px;overflow:hidden}
+  .stage{width:100%;flex:1 1 100%}
+  .stage-nav{gap:0;padding:0 4px}
+  .stage-nav .tab{padding:0 8px}
+  .workspace .rail,.workspace:not(.inspector-collapsed) .inspector,.workspace .inspector{
+    position:absolute;top:0;bottom:0;z-index:15;flex:none;opacity:1;
+    width:min(320px,calc(100% - 50px));box-shadow:0 0 20px var(--shadow)}
+  .workspace .rail{left:16px;display:flex}
+  .workspace .inspector{right:16px}
+  .workspace.rail-collapsed .rail,.workspace.inspector-collapsed .inspector{
+    visibility:hidden;pointer-events:none;opacity:0}
+  .workspace .edge-toggle{position:absolute;top:0;bottom:0;width:16px;z-index:16}
+  .workspace .edge-rail{left:min(336px,calc(100% - 34px))}
+  .workspace .edge-inspector{right:min(336px,calc(100% - 34px))}
+  .workspace.rail-collapsed .edge-rail{left:0}
+  .workspace.inspector-collapsed .edge-inspector{right:0}
+  .map-search{max-width:calc(100% - 92px)}
+  .map-tools{right:6px;top:8px}
+  .map-hint{display:none}
+  .map-legend{max-width:calc(100% - 20px);flex-wrap:wrap}
+  .stale{flex-wrap:wrap;gap:5px}
+  .stale span{flex-basis:100%}
+}

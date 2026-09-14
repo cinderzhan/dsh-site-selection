@@ -17,33 +17,34 @@ DSH (DeepSeek Harness) 插件。**在真实三维城市地图上点任意位置�
 - **踩点闭环** — 待看 → 看过 → 上会中 → 签约 / 否决，每一步在列表里一键推进；定案有记录、能撤回
 - **换城市一条命令** — `fetch-city.mjs` 建好数据集，重启即可用，不改代码
 
-## 安装
+## Desktop 工作台规范（1.1.0）
 
-需要 Node ≥ 20 和 DSH Desktop。
+需要带本地工作台市场的 DSH Desktop（desktopWorkbenches 0.1.x、Harness 0.1.5-rc.2 兼容接口）。安装提供方插件后，在「工作台市场」添加并打开「门店选址」，入口固定和切换由 Desktop 管理。本仓库保持 private；本地打包不代表已经发布到 npm 或远程市场。
 
-直接装（macOS，DSH 插件目录）：
+业务区域默认在左侧占 65%，可折叠；右侧保留唯一的原生 Agent 会话。插件不覆盖侧边栏、设置、模式切换和公共导航，不创建或跳转会话，也不修改 DSH 工作区。模式、模型、工具和权限遵循当前原生会话。
+
+首次进入通过 Desktop 选择工作区并创建会话，再在业务面板选择或新建选址项目。**选址项目是业务资料，DSH 工作区是原生项目文件夹**，两者不要求相同。多个会话可以使用同一个选址项目；每个会话记住自己的选址项目选择，重启后恢复。旧 project.sessionId 仅作为兼容的选择提示，不抢占旧会话或恢复旧工作区。
+
+项目选择保存在数据根目录的 `.desktop-session-projects.json`，不依赖每次变化的本地网页端口。切换工作台或会话保留已挂载业务 iframe，消息只有在对应工作台和会话处于前台时才会追加到原生草稿，不自动发送，不覆盖原文。离开整个工作台页面或重启前，请保存业务表单修改。
+
+开发及安装包检查：
 
 ```bash
-cd ~/Library/Application\ Support/dsh-desktop/harness/profiles/web
-npm install "github:dataelement/dsh-site-selection"
+npm run check
+npm pack --dry-run
 ```
 
-要改代码的话 clone 下来再 link 进去：
+包包含 `workbench.json`、客户端、服务端、城市数据与样例。插件加载由宿主插件安装机制完成；注册后才出现在本地市场。Github 提交、逐版本审核和远程上架属于后续市场流程。
 
-```bash
-git clone https://github.com/dataelement/dsh-site-selection.git
-cd dsh-site-selection
-npm run check      # 57 个测试
+## 数据和能力边界
 
-cd ~/Library/Application\ Support/dsh-desktop/harness/profiles/web
-npm install "link:<刚才 clone 的绝对路径>"
-```
+保留地图、评分、点位/铺源/项目增删改查与踩点记录。地图/评分使用随包城市数据，可离线使用；模拟商业数据在页面内标明，不作为真实测量数据。通过「交给 DSH」把项目路径与点位上下文追加到当前草稿，文件访问仍需原生会话的工具及授权，不自动扩大工作区权限。项目删除只移动到 `.trash/`，不删除 DSH 会话或工作区；移除工作台入口也不清除业务资料。
 
-重启 DSH，侧边栏底部出现 **◎ 选址工作台**。
+所有 API 和 iframe 静态资源使用宿主 connection 的请求校验与认证。写请求要求同源 JSON；文件读取拒绝符号链接跨出选址项目；iframe 消息校验来源窗口、同源、项目、当前会话及工作台归属。
 
 ## 快速上手
 
-打开工作台 → 项目下拉 → 选一个示例：
+打开工作台 → 通过 Desktop 新建会话 → 业务项目下拉 → 选一个示例：
 
 | 示例 | 场景 | 候选点位 |
 |---|---|---|

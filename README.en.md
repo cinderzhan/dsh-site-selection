@@ -17,29 +17,28 @@ Describe what you want to DSH in plain language and it searches with the same mo
 - **Site-visit loop.** To visit → visited → in review → signed / rejected, each step one click in the list. Decisions are recorded and can be reverted.
 - **Add a city with one command.** `fetch-city.mjs` builds the dataset. Restart and it is ready, no code changes.
 
-## Installation
+## Desktop workbench standard (1.1.0)
 
-Requires Node ≥ 20 and DSH Desktop.
+Requires DSH Desktop with the local workbench market (desktopWorkbenches 0.1.x and Harness 0.1.5-rc.2 compatible interfaces). Once the provider plugin is installed, add and open Store Site Selection from Workbench Market. Desktop owns pinning and switching. This repository remains private; local packaging does not mean publication to npm or a remote market.
 
-Install directly (macOS, DSH plugin directory):
+The business panel occupies 65% on the left and the native conversation remains the single Agent input. Public navigation, settings, modes, models, tools and permissions stay under Desktop and the current native session. The plugin never creates or opens sessions and never changes DSH workspace membership.
 
-```bash
-cd ~/Library/Application\ Support/dsh-desktop/harness/profiles/web
-npm install "github:dataelement/dsh-site-selection"
-```
+Create a session through Desktop first, then select a business project. A business project is independent of a native workspace folder. Several sessions can share a business project; each session remembers its own selection in `.desktop-session-projects.json` in the data root. Legacy project.sessionId is a selection hint only and cannot revive old sessions or workspaces.
 
-To work on the code, clone it and link it in:
+Switching workbenches or sessions preserves mounted business iframes. Only messages from the active owned session and its exact same-origin frame can append to the native draft, without replacing text or sending it. Save business form changes before leaving the entire workbench page or restarting.
 
 ```bash
-git clone https://github.com/dataelement/dsh-site-selection.git
-cd dsh-site-selection
-npm run check      # 57 tests
-
-cd ~/Library/Application\ Support/dsh-desktop/harness/profiles/web
-npm install "link:<absolute path of the clone>"
+npm run check
+npm pack --dry-run
 ```
 
-Restart DSH. **◎ 选址工作台** appears at the bottom of the sidebar.
+The package contains workbench.json, client/server code, city data and samples. The host's plugin installer loads the provider, then its registration appears in the local market. GitHub submission, per-version review and remote publishing belong to the later market workflow.
+
+## Data and capability boundaries
+
+Maps, scoring, candidate/listing/project CRUD and site visit records remain available. Bundled city data supports offline maps; simulated commercial data remains labeled separately. “Ask DSH” adds project paths and selection context to the current draft; file access still needs native session tools and authorization and does not expand workspace permissions. Deleting a business project moves it to .trash without deleting DSH sessions or workspaces. Removing the workbench entry does not erase business data.
+
+All API and iframe asset routes use the host connection request authentication gate. Writes require same-origin JSON. File reads reject symlink escape from the business project. The bridge checks origin, source window, business project and active session/workbench ownership.
 
 ## Quick start
 
