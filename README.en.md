@@ -174,3 +174,7 @@ Code is MIT ([LICENSE](./LICENSE)).
 
 The geographic data under `src/data/` is a derivative database of OpenStreetMap, licensed **ODbL 1.0, which is share-alike**.
 © OpenStreetMap contributors. Read [DATA-LICENSE.md](./DATA-LICENSE.md) before redistributing or commercializing.
+
+## Initial draft (1.1.2)
+
+Creating or first associating business data automatically prepares the original onboarding text in the native draft for user review and sending; it never submits a model request. Without a native session, the text is queued until that business context has an active owned session. Delivery occurs once per session/business pair. Existing plain text is preserved; rich references and in-flight drafts defer insertion and retry when ready. Pending text and delivery records survive reload in localStorage for the current Desktop origin; clearing browser storage removes these records.

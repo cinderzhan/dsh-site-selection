@@ -21,14 +21,16 @@ async function client(storage = new Map()) {
     window: { location: { origin }, __ModuleLoader__: { load: spec => { plugin = spec.factory(() => ({ createElement() {} })) } } },
     document: { createElement: () => ({ dataset: {}, remove() {} }), head: { appendChild() {} } },
     localStorage: { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },
+    setInterval: () => 1, clearInterval() {},
     fetch: async (path, options) => {
       if (options) { posts.push({ path, body: JSON.parse(options.body) }); if (pending) await pending; return { ok: true, json: async () => ({}) } }
+      if (path.includes('/bootstrap')) return { ok: true, json: async () => ({ folder: '/business/A', state: { project: { name: 'A' } } }) }
       return { ok: true, json: async () => ({ bindings: { s1: 'project-a', s2: 'project-b' } }) }
     },
   })
   plugin.apply(ctx)
   await new Promise(resolve => setImmediate(resolve))
-  return { plugin, state, storage, posts, frame: { contentWindow: frameWindow }, event: { origin, source: frameWindow, data: { project: 'project-a' } }, draft: () => draft, chips: () => { occurrences = [{}] },
+  return { plugin, state, storage, posts, frame: { contentWindow: frameWindow }, event: { origin, source: frameWindow, data: { project: 'project-a' } }, draft: () => draft, chips: (value = true) => { occurrences = value ? [{}] : [] },
     switch: id => { current = id; callbacks.forEach(cb => cb()) }, defer: promise => { pending = promise } }
 }
 
@@ -145,4 +147,27 @@ test('business creation and iframe visibility do not require a native session', 
   const create = source.slice(source.indexOf('    const submitCreate ='), source.indexOf("    return h('section'"))
   assert.doesNotMatch(create, /ownedSession|sessionId/)
   assert.match(source, /display: key === frameKey \? 'block' : 'none'/)
+})
+
+test('onboarding queues without native session and restores a single draft delivery', async () => {
+  const c = await client(); c.switch(null); await c.plugin.openProject('new-business')
+  assert.equal(c.draft(), '已有草稿')
+  const restored = await client(c.storage); restored.switch(null)
+  restored.state.sessionBindings.new = 'site-selection'; restored.switch('new')
+  assert.match(restored.draft(), /^已有草稿\n\n/)
+  assert.match(restored.draft(), /先帮我选 10 个/)
+  assert.equal(restored.draft().includes('\\n'), false)
+  const once = restored.draft(); restored.plugin.flushInitialDraft()
+  assert.equal(restored.draft(), once)
+  const reloaded = await client(c.storage); reloaded.switch(null)
+  reloaded.state.sessionBindings.new = 'site-selection'; reloaded.switch('new')
+  assert.equal(reloaded.draft(), '已有草稿')
+})
+test('rich draft or hidden workbench retains initial request until its owner is ready', async () => {
+  const c = await client(); c.chips(); await c.plugin.openProject('project-a')
+  assert.equal(c.draft(), '已有草稿')
+  c.state.active = 'other'; c.chips(false)
+  assert.equal(c.plugin.flushInitialDraft(), false)
+  c.state.active = 'site-selection'; assert.equal(c.plugin.flushInitialDraft(), true)
+  assert.match(c.draft(), /按回车发送/)
 })
