@@ -47,3 +47,7 @@ ODbL 是 **share-alike（相同方式共享）**。简单说：
 
 **不要拿这里面的租金去谈判，也不要把这些数字写进任何对外材料。**
 生成器在 `scripts/generate-market.mjs`，改 seed 就是另一批。
+
+## Code and data licenses
+
+The MIT license in `LICENSE` covers the code only. The data files under `src/data/` are NOT MIT: they are a derived database of OpenStreetMap and are licensed under ODbL 1.0, which is share-alike. Read this file before redistributing them or building a product on them.
