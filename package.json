@@ -18,7 +18,7 @@
   "author": "liqingb0220-stack",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dataelement/dsh-site-selection.git"
+    "url": "git+https://github.com/cinderzhan/dsh-site-selection.git"
   },
   "homepage": "https://github.com/dataelement/dsh-site-selection#readme",
   "private": true,
@@ -64,7 +64,7 @@
     }
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "*",
-    "@deepseek-ai/dsh-host-webserver": "*"
+    "@deepseek-ai/cordis": ">=4.0.1 <5.0.0-0",
+    "@deepseek-ai/dsh-host-webserver": ">=0.1.5-rc.2 <0.2.0-0"
   }
 }
