@@ -17,29 +17,38 @@ Describe what you want to DSH in plain language and it searches with the same mo
 - **Site-visit loop.** To visit → visited → in review → signed / rejected, each step one click in the list. Decisions are recorded and can be reverted.
 - **Add a city with one command.** `fetch-city.mjs` builds the dataset. Restart and it is ready, no code changes.
 
-## Installation
+## Desktop workbench adapter (1.2.0)
 
-Requires Node ≥ 20 and DSH Desktop.
+Requires DSH Desktop exposing `desktopWorkbenches.register`, `isActive`, and `ownsSession`. Once the provider plugin is installed, add and open Store Site Selection from Workbench Market. Desktop owns pinning, repository identity, switching, and session ownership. The runtime ID is `wb-dataelement-dsh-site-selection`; the market entry declares `legacyWorkbenchIds: [site-selection]` so Desktop can migrate state, favorites, and session ownership from older local installations.
 
-Install directly (macOS, DSH plugin directory):
+The business panel occupies 65% on the left and the native conversation remains the single Agent input. Public navigation, settings, modes, models, tools and permissions stay under Desktop and the current native session. The plugin never creates or opens sessions and never changes DSH workspace membership.
 
-```bash
-cd ~/Library/Application\ Support/dsh-desktop/harness/profiles/web
-npm install "github:dataelement/dsh-site-selection"
-```
+Open the workbench to select, create and edit a business project immediately. Create a native session in the conversation area only when requesting Agent help. A business project is independent of a native workspace folder. Several sessions can share a business project; each session remembers its own selection in `.desktop-session-projects.json` in the data root. Without a session, the last business selection is stored in localStorage for the current Desktop origin. A new session inherits that selection; explicit existing session mappings take precedence. Legacy project.sessionId is a selection hint only and cannot revive old sessions or workspaces.
 
-To work on the code, clone it and link it in:
+Switching workbenches or sessions preserves mounted business iframes. Only messages from the active owned session and its exact same-origin frame can append to the native draft, without replacing text or sending it. Save business form changes before leaving the entire workbench page or restarting.
 
 ```bash
-git clone https://github.com/dataelement/dsh-site-selection.git
-cd dsh-site-selection
-npm run check      # 57 tests
-
-cd ~/Library/Application\ Support/dsh-desktop/harness/profiles/web
-npm install "link:<absolute path of the clone>"
+npm run check
+npm pack --dry-run
 ```
 
-Restart DSH. **◎ 选址工作台** appears at the bottom of the sidebar.
+The package contains client/server code, city data, and samples. `workbench.json` remains only for older tooling; the current market contract uses `package.json`, runtime registration, and genuine screenshots in this repository. The host plugin installer loads the provider, after which Desktop can merge it with the market entry. Public listing still requires a separate directory pull request to `awesome-dsh-workbench`.
+
+The current market metadata draft lives at [`docs/market-entry.yml`](docs/market-entry.yml). It supports source review and the later directory submission; Desktop does not read it as runtime configuration.
+
+## Screenshots
+
+![3D map and site candidates](docs/screenshots/site-map.png)
+
+![Site detail and scoring evidence](docs/screenshots/site-detail.png)
+
+![Reference baseline and metric distribution](docs/screenshots/site-reference.png)
+
+## Data and capability boundaries
+
+Maps, scoring, candidate/listing/project CRUD and site visit records remain available. Bundled city data supports offline maps; simulated commercial data remains labeled separately. “Ask DSH” adds project paths and selection context to the current draft; file access still needs native session tools and authorization and does not expand workspace permissions. Deleting a business project moves it to .trash without deleting DSH sessions or workspaces. Removing the workbench entry does not erase business data.
+
+All API and iframe asset routes use the host connection request authentication gate. Writes require same-origin JSON. File reads reject symlink escape from the business project. The bridge checks origin, source window, business project and active session/workbench ownership.
 
 ## Quick start
 
@@ -175,3 +184,7 @@ Code is MIT ([LICENSE](./LICENSE)).
 
 The geographic data under `src/data/` is a derivative database of OpenStreetMap, licensed **ODbL 1.0, which is share-alike**.
 © OpenStreetMap contributors. Read [DATA-LICENSE.md](./DATA-LICENSE.md) before redistributing or commercializing.
+
+## Initial draft (1.2.0)
+
+Creating or first associating business data automatically prepares the original onboarding text in the native draft for user review and sending; it never submits a model request. Without a native session, the text is queued until that business context has an active owned session. Delivery occurs once per session/business pair. Existing plain text is preserved; rich references and in-flight drafts defer insertion and retry when ready. Pending text and delivery records survive reload in localStorage for the current Desktop origin; clearing browser storage removes these records.

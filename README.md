@@ -17,33 +17,44 @@ DSH (DeepSeek Harness) 插件。**在真实三维城市地图上点任意位置�
 - **踩点闭环** — 待看 → 看过 → 上会中 → 签约 / 否决，每一步在列表里一键推进；定案有记录、能撤回
 - **换城市一条命令** — `fetch-city.mjs` 建好数据集，重启即可用，不改代码
 
-## 安装
+## Desktop 工作台适配（1.2.0）
 
-需要 Node ≥ 20 和 DSH Desktop。
+需要提供 `desktopWorkbenches.register`、`isActive` 与 `ownsSession` 的 DSH Desktop。安装提供方插件后，在「工作台市场」添加并打开「门店选址」，入口固定、仓库身份和会话归属由 Desktop 管理。运行时 ID 为 `wb-dataelement-dsh-site-selection`；市场条目通过 `legacyWorkbenchIds: [site-selection]` 授权 Desktop 把旧安装的状态、收藏和会话归属迁移到仓库身份。
 
-直接装（macOS，DSH 插件目录）：
+业务区域默认在左侧占 65%，可折叠；右侧保留唯一的原生 Agent 会话。插件不覆盖侧边栏、设置、模式切换和公共导航，不创建或跳转会话，也不修改 DSH 工作区。模式、模型、工具和权限遵循当前原生会话。
+
+打开工作台即可在业务面板选择、新建和编辑选址项目，无需先创建原生会话；需要 Agent 帮助时，再在会话区选择工作区并创建会话。**选址项目是业务资料，DSH 工作区是原生项目文件夹**，两者不要求相同。多个会话可以使用同一个选址项目；每个会话记住自己的选址项目选择，重启后恢复。旧 project.sessionId 仅作为兼容的选择提示，不抢占旧会话或恢复旧工作区。
+
+会话对应的项目选择保存在数据根目录的 `.desktop-session-projects.json`；尚无会话时，最近选择保存在当前 Desktop 来源的 localStorage。创建第一个会话会继承正在浏览的项目，已有会话的明确选择优先。切换工作台或会话保留已挂载业务 iframe，消息只有在对应工作台和会话处于前台时才会追加到原生草稿，不自动发送，不覆盖原文。离开整个工作台页面或重启前，请保存业务表单修改。
+
+开发及安装包检查：
 
 ```bash
-cd ~/Library/Application\ Support/dsh-desktop/harness/profiles/web
-npm install "github:dataelement/dsh-site-selection"
+npm run check
+npm pack --dry-run
 ```
 
-要改代码的话 clone 下来再 link 进去：
+包包含客户端、服务端、城市数据与样例。`workbench.json` 仅保留给旧版工具读取；现行市场以 `package.json`、运行时注册和仓库中的真实截图为准。插件加载由宿主插件安装机制完成；注册后才可与市场条目合并。公开市场收录仍需在 `awesome-dsh-workbench` 单独提交目录 PR。
 
-```bash
-git clone https://github.com/dataelement/dsh-site-selection.git
-cd dsh-site-selection
-npm run check      # 57 个测试
+现行市场元数据草案见 [`docs/market-entry.yml`](docs/market-entry.yml)。该文件用于源仓库审查和后续目录投稿，不会被 Desktop 当成运行时配置。
 
-cd ~/Library/Application\ Support/dsh-desktop/harness/profiles/web
-npm install "link:<刚才 clone 的绝对路径>"
-```
+## 界面截图
 
-重启 DSH，侧边栏底部出现 **◎ 选址工作台**。
+![三维地图与候选点位](docs/screenshots/site-map.png)
+
+![点位详情与评分依据](docs/screenshots/site-detail.png)
+
+![参照系与指标分布](docs/screenshots/site-reference.png)
+
+## 数据和能力边界
+
+保留地图、评分、点位/铺源/项目增删改查与踩点记录。地图/评分使用随包城市数据，可离线使用；模拟商业数据在页面内标明，不作为真实测量数据。通过「交给 DSH」把项目路径与点位上下文追加到当前草稿，文件访问仍需原生会话的工具及授权，不自动扩大工作区权限。项目删除只移动到 `.trash/`，不删除 DSH 会话或工作区；移除工作台入口也不清除业务资料。
+
+所有 API 和 iframe 静态资源使用宿主 connection 的请求校验与认证。写请求要求同源 JSON；文件读取拒绝符号链接跨出选址项目；iframe 消息校验来源窗口、同源、项目、当前会话及工作台归属。
 
 ## 快速上手
 
-打开工作台 → 项目下拉 → 选一个示例：
+打开工作台 → 业务项目下拉 → 选一个示例：
 
 | 示例 | 场景 | 候选点位 |
 |---|---|---|
@@ -175,3 +186,7 @@ npm run market        # 重新生成模拟商业数据
 
 `src/data/` 下的地理数据是 OpenStreetMap 衍生数据库，**ODbL 1.0，具有传染性**——
 © OpenStreetMap contributors。对外分发或商业化前请读 [DATA-LICENSE.md](./DATA-LICENSE.md)。
+
+## 开场白草稿（1.2.0）
+
+创建或首次关联业务资料后，工作台会自动准备原版开场白并追加到原生会话草稿，由用户确认后发送，不会自动调用模型。尚无会话时先保存待准备内容；创建或打开对应会话后自动追加。同一会话与同一业务资料只准备一次。已有普通文字保留，引用卡片或正在提交的草稿会延后追加，待可用时重试。待准备内容与交付记录保存在当前 Desktop 来源的 localStorage，刷新后继续；清除浏览器存储会清除该记录。

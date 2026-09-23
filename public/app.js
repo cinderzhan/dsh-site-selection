@@ -46,6 +46,14 @@ const LAYERS = [
 // colour for "somewhere that sells food".
 const FOOD_KINDS = ['restaurant', 'fastfood', 'cafe', 'teadrink', 'bakery', 'bar', 'dessert']
 
+// The business iframe is often 600–700 px wide. Its panels become drawers;
+// keep wide-screen preferences independent from compact defaults.
+const compactLayout = window.matchMedia('(max-width: 760px)')
+function panelPreference(panel) {
+  try { return localStorage.getItem(`ss.${panel}${compactLayout.matches ? '.compact' : ''}`) === 'open' ||
+    (!compactLayout.matches && localStorage.getItem(`ss.${panel}`) !== 'closed') } catch { return !compactLayout.matches }
+}
+
 const state = {
   data: null, scores: {}, mode: 'yield', folder: '', revision: '',
   dataset: null, floorGrid: null, poiIndex: null, brandPoints: [], allPois: [],
@@ -53,8 +61,8 @@ const state = {
   sort: { key: 'score', dir: -1 },
   view: 'map', filter: 'all', probe: null, selection: null,
   railSort: (() => { try { return localStorage.getItem('ss.railSort') || 'score' } catch { return 'score' } })(),
-  inspectorOpen: (() => { try { return localStorage.getItem('ss.inspector') !== 'closed' } catch { return true } })(),
-  railOpen: (() => { try { return localStorage.getItem('ss.rail') !== 'closed' } catch { return true } })(),
+  inspectorOpen: panelPreference('inspector'),
+  railOpen: panelPreference('rail'),
   pending: null, rendered: null, saving: false,
   // Set by 去定案 on a rail row; the inspector renders the 定案 group lit up
   // and scrolled into view for this site, then the flag is cleared.
@@ -234,27 +242,30 @@ function probeAt(lng, lat) {
   state.probe = analyse({ lng, lat })
   state.probe.ms = Math.round(performance.now() - t0)
   state.selection = '__probe__'
+  if (compactLayout.matches) setInspector(true)
   rebuildMarkers(); drawMap(); renderInspector(); renderRail()
 }
 
 function setInspector(open) {
+  if (open && compactLayout.matches && state.railOpen) setRail(false)
   state.inspectorOpen = open
-  try { localStorage.setItem('ss.inspector', open ? 'open' : 'closed') } catch {}
+  try { localStorage.setItem(`ss.inspector${compactLayout.matches ? '.compact' : ''}`, open ? 'open' : 'closed') } catch {}
   document.querySelector('.workspace').classList.toggle('inspector-collapsed', !open)
   const btn = $('toggleInspector')
   // Only the tooltip changes; the glyph flips in CSS. Rewriting the label made
   // the button change width and shuffle everything beside it on every click.
-  if (btn) btn.title = open ? '折叠右侧详情，地图占满' : '展开右侧详情'
+  if (btn) { btn.title = open ? '收起详情' : '展开详情'; btn.setAttribute('aria-label', btn.title); btn.setAttribute('aria-expanded', String(open)) }
   // The map watcher picks the new width up on its next tick; nudge it now.
   if (state.view === 'map') { map.resize(); drawMap() }
 }
 
 function setRail(open) {
+  if (open && compactLayout.matches && state.inspectorOpen) setInspector(false)
   state.railOpen = open
-  try { localStorage.setItem('ss.rail', open ? 'open' : 'closed') } catch {}
+  try { localStorage.setItem(`ss.rail${compactLayout.matches ? '.compact' : ''}`, open ? 'open' : 'closed') } catch {}
   document.querySelector('.workspace').classList.toggle('rail-collapsed', !open)
   const btn = $('toggleRail')
-  if (btn) btn.title = open ? '折叠左侧点位列表' : '展开左侧点位列表'
+  if (btn) { btn.title = open ? '收起点位列表' : '展开点位列表'; btn.setAttribute('aria-label', btn.title); btn.setAttribute('aria-expanded', String(open)) }
   if (state.view === 'map') { map.resize(); drawMap() }
 }
 
@@ -1236,6 +1247,7 @@ async function action(payload, success) {
  *             map itself (you are already looking at it, moving would jar).
  */
 function selectSite(id, { fly = false } = {}) {
+  if (compactLayout.matches) setInspector(true)
   state.selection = id
   state.probe = null
   const site = sites().find(s => s.id === id)
@@ -1319,6 +1331,7 @@ els.rail.addEventListener('click', e => {
   if (!row) return
   if (row.dataset.site === '__probe__') {
     state.selection = '__probe__'
+  if (compactLayout.matches) setInspector(true)
     rebuildMarkers(); drawMap(); renderInspector(); renderRail()
   } else if (row.dataset.site !== state.selection) selectSite(row.dataset.site, { fly: true })
 })
@@ -1565,7 +1578,7 @@ $('staleReload').onclick = () => {
 $('staleDismiss').onclick = () => { els.stale.hidden = true }
 
 window.addEventListener('message', e => {
-  if (e.origin !== window.location.origin) return
+  if (e.origin !== window.location.origin || e.source !== window.parent) return
   if (e.data?.type === 'dsh-site-selection:ask-result') {
     toast(e.data.ok ? '已填进右侧 DSH 输入框，确认后按回车' : `发送失败：${e.data.error}`)
   }
@@ -1589,6 +1602,12 @@ els.legend.innerHTML = LAYERS.map(l => `<button class="legend-item" data-layer="
 
 setInspector(state.inspectorOpen)
 setRail(state.railOpen)
+compactLayout.addEventListener('change', () => {
+  // Reading the newly active breakpoint never overwrites the other layout.
+  const inspector = panelPreference('inspector'), rail = panelPreference('rail')
+  setInspector(inspector)
+  setRail(rail && (!compactLayout.matches || !inspector))
+})
 
 if (!project) {
   els.app.classList.add('ready')

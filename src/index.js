@@ -1,4 +1,4 @@
-import { mkdir, readFile, readdir, rename, stat, writeFile, appendFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, rename, stat, writeFile, appendFile, realpath } from 'node:fs/promises'
 import { watch } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, extname, join, resolve } from 'node:path'
@@ -12,7 +12,7 @@ import { DATASETS } from './datasets.js'
 import { siteFromListing } from './market.js'
 
 export const name = 'dsh-site-selection'
-export const inject = ['webServer']
+export const inject = ['webServer', 'connection']
 
 const ROOT = dirname(fileURLToPath(import.meta.url))
 const PUBLIC = join(ROOT, '..', 'public')
@@ -879,8 +879,58 @@ async function loadSample(folder, state, which = 'shanghai-coffee') {
   return { text: `载入示例项目「${spec.label}」（${bundle.pois.length} 条真实 POI + 底图 + ${state.sites.length} 个候选点位）`, durable: false }
 }
 
+// Session-to-business-project selections are many-to-one and independent of
+// native DSH workspace membership. Serialize atomic writes to avoid lost updates.
+let bindingQueue = Promise.resolve()
+export async function readSessionProjects() {
+  let bindings = {}
+  try { bindings = JSON.parse(await readFile(join(DATA_ROOT, '.desktop-session-projects.json'), 'utf8')) }
+  catch (error) { if (error.code !== 'ENOENT') throw error }
+  if (!bindings || typeof bindings !== 'object' || Array.isArray(bindings)) throw new Error('Invalid session project store')
+  // Read legacy bindings only as selection hints. Never open or create sessions.
+  for (const row of await listProjects()) {
+    if (validSessionId(row.sessionId) && !Object.hasOwn(bindings, row.sessionId)) bindings[row.sessionId] = row.id
+  }
+  return bindings
+}
+const validSessionId = id => typeof id === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,255}$/.test(id) && !['__proto__', 'constructor', 'prototype'].includes(id)
+export function selectSessionProject(sessionId, project) {
+  const task = bindingQueue.then(async () => {
+    if (!validSessionId(sessionId) || typeof project !== 'string' || !project || slugify(project) !== project) throw new Error('Invalid session/project')
+    if (!(await listProjects()).some(row => row.id === project)) throw new Error('Project not found')
+    const bindings = await readSessionProjects()
+    bindings[sessionId] = project
+    const target = join(DATA_ROOT, '.desktop-session-projects.json')
+    const temp = `${target}.${randomUUID()}.tmp`
+    await writeFile(temp, JSON.stringify(bindings), 'utf8')
+    await rename(temp, target)
+    return bindings
+  })
+  bindingQueue = task.catch(() => {})
+  return task
+}
+
+function validateRequest(req) {
+  const host = req.headers?.host || ''
+  if (!/^(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/.test(host)) return 403
+  const origin = req.headers?.origin
+  if (origin && origin !== `http://${host}` && origin !== `https://${host}`) return 403
+  if (req.headers?.['sec-fetch-site'] === 'cross-site') return 403
+  if (req.method === 'POST' && !/^application\/json(?:;|$)/i.test(req.headers?.['content-type'] || '')) return 415
+  return 0
+}
+
 export async function handleApi(req, res) {
+  const rejected = validateRequest(req)
+  if (rejected) return json(res, rejected, { error: 'Request origin or content type rejected' })
   const url = new URL(req.url || '/', 'http://127.0.0.1')
+  if (url.pathname === '/api/site-selection/session-projects') {
+    if (req.method === 'GET') { await bindingQueue; return json(res, 200, { bindings: await readSessionProjects() }) }
+    if (req.method !== 'POST') return json(res, 405, { error: 'method not allowed' })
+    const payload = await readBody(req)
+    try { return json(res, 200, { bindings: await selectSessionProject(payload.sessionId, payload.project) }) }
+    catch (error) { return json(res, 400, { error: error.message }) }
+  }
 
   if (ASSETS[url.pathname]) {
     if (req.method !== 'GET') return json(res, 405, { error: 'method not allowed' })
@@ -1078,7 +1128,9 @@ export async function handleApi(req, res) {
     const { folder } = await ensureProject(projectParam(url))
     const target = resolve(folder, String(url.searchParams.get('path') || ''))
     if (target !== folder && !target.startsWith(`${folder}/`)) return json(res, 403, { error: 'invalid path' })
-    const bytes = await readFile(target)
+    const realFolder = await realpath(folder), realTarget = await realpath(target)
+    if (!realTarget.startsWith(`${realFolder}/`)) return json(res, 403, { error: 'invalid path' })
+    const bytes = await readFile(realTarget)
     const mime = ({ '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp',
       '.md': 'text/markdown; charset=utf-8', '.json': 'application/json; charset=utf-8' })[extname(target).toLowerCase()] || 'application/octet-stream'
     res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff' })
@@ -1091,14 +1143,18 @@ export async function handleApi(req, res) {
 
 export function apply(ctx) {
   const routes = [...Object.keys(ASSETS),
-    '/api/site-selection/bootstrap', '/api/site-selection/projects',
+    '/api/site-selection/bootstrap', '/api/site-selection/projects', '/api/site-selection/session-projects',
     '/api/site-selection/action', '/api/site-selection/file', '/api/site-selection/projects/delete',
     '/api/site-selection/datasets', '/api/site-selection/dataset', '/api/site-selection/probe',
     '/api/site-selection/market', '/api/site-selection/watch']
   for (const path of routes) {
     ctx.effect(() => ctx.webServer.register({
       kind: 'exact', path,
-      handler: (req, res) => handleApi(req, res).catch(error => json(res, 500, { error: error instanceof Error ? error.message : String(error) })),
+      handler: (req, res) => {
+        const rejection = ctx.connection?.requestRejection?.(req)
+        if (!ctx.connection?.requestRejection || rejection !== undefined) return json(res, rejection || 403, { error: 'Authentication required' })
+        return handleApi(req, res).catch(error => json(res, 500, { error: error instanceof Error ? error.message : String(error) }))
+      },
     }), `dsh-site-selection: ${path}`)
   }
 }

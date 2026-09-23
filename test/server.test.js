@@ -212,22 +212,9 @@ test('askPrompt declares the buffer it appends to', async () => {
   assert.ok(fn.indexOf('const lines = [') < fn.indexOf('lines.push('), 'declared before first use')
 })
 
-test('the panel follows the active conversation instead of one global project', async () => {
-  const client = await readFile(new URL('../lib/client.js', import.meta.url), 'utf8')
-  assert.match(client, /function projectForSession/,
-    'a session must be resolvable back to its project')
-  assert.match(client, /list\.getSnapshot\(\)\?\.current/,
-    'the watcher must read the active session from sessions.list.current')
-  // `selection` is the tempting one and it is wrong: it goes null mid-switch,
-  // so a watcher built on it blanks the panel instead of following.
-  assert.ok(!/sessions\?\.selection\?\.sessionId/.test(client),
-    'sessions.selection must not be used as the active-session signal')
-  // The guard is the point: an unrelated conversation must not blank the panel.
-  assert.match(client, /if \(slug && slug !== openState\.project\) setOpen/,
-    'only switch when the session maps to a project')
-})
 
-test('the conversation binding survives a restart because it lives in project.json', async () => {
+
+test('legacy project sessionId remains readable for migration only', async () => {
   const { folder, state } = await ensureProject('绑定测试', { name: '绑定测试' })
   assert.equal(state.project.sessionId, '')
 
@@ -246,32 +233,9 @@ test('the conversation binding survives a restart because it lives in project.js
   assert.throws(() => applyAction(state, { type: 'bind-session', sessionId: '' }), /不能为空/)
 })
 
-test('the action endpoint takes `project` in the body, and the client sends it there', async () => {
-  // A mismatched call fails with 400 and, because the binding is best-effort,
-  // fails silently — the panel simply never learns which conversation it is in.
-  const server = await readFile(new URL('../src/index.js', import.meta.url), 'utf8')
-  assert.match(server, /const slug = slugify\(action\.project \|\| ''\)/,
-    'the endpoint reads project from the parsed body')
-  const client = await readFile(new URL('../lib/client.js', import.meta.url), 'utf8')
-  const call = client.slice(client.indexOf("type: 'bind-session'") - 400, client.indexOf("type: 'bind-session'") + 80)
-  assert.match(call, /project: slug/, 'the bind-session call must carry project in the body')
-  assert.ok(!/projectUrl\('\/api\/site-selection\/action'/.test(client),
-    'the action endpoint must not be called with project in the query string')
-})
 
-test('on startup the panel resolves the project from the conversation already open', async () => {
-  // Without this, the watcher latches the current session as its baseline and
-  // never fires for it, so the panel starts blank even though the conversation
-  // you are sitting in belongs to a project.
-  const client = await readFile(new URL('../lib/client.js', import.meta.url), 'utf8')
-  const apply = client.slice(client.indexOf('bridge = { sessions:'))
-  const seedAt = apply.indexOf('Object.assign(openState')
-  const resolveAt = apply.indexOf('projectForSession(ctx.sessions?.list?.getSnapshot?.()?.current)')
-  const watcherAt = apply.indexOf('follow the active conversation')
-  assert.ok(seedAt >= 0 && resolveAt >= 0 && watcherAt >= 0, 'all three steps must be present')
-  assert.ok(seedAt < resolveAt, 'openState must be seeded before anything resolves against it')
-  assert.ok(resolveAt < watcherAt, 'the startup resolve must come before the watcher latches a baseline')
-})
+
+
 
 test('the district baseline is cached per format, not per city', async () => {
   // Competition is part of the baseline, and competition depends on the format.
