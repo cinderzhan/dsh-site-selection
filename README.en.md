@@ -17,9 +17,9 @@ Describe what you want to DSH in plain language and it searches with the same mo
 - **Site-visit loop.** To visit → visited → in review → signed / rejected, each step one click in the list. Decisions are recorded and can be reverted.
 - **Add a city with one command.** `fetch-city.mjs` builds the dataset. Restart and it is ready, no code changes.
 
-## Desktop workbench standard (1.1.0)
+## Desktop workbench adapter (1.2.0)
 
-Requires DSH Desktop with the local workbench market (desktopWorkbenches 0.1.x and Harness 0.1.5-rc.2 compatible interfaces). Once the provider plugin is installed, add and open Store Site Selection from Workbench Market. Desktop owns pinning and switching. This repository remains private; local packaging does not mean publication to npm or a remote market.
+Requires DSH Desktop exposing `desktopWorkbenches.register`, `isActive`, and `ownsSession`. Once the provider plugin is installed, add and open Store Site Selection from Workbench Market. Desktop owns pinning, repository identity, switching, and session ownership. The runtime ID is `wb-dataelement-dsh-site-selection`; the market entry declares `legacyWorkbenchIds: [site-selection]` so Desktop can migrate state, favorites, and session ownership from older local installations.
 
 The business panel occupies 65% on the left and the native conversation remains the single Agent input. Public navigation, settings, modes, models, tools and permissions stay under Desktop and the current native session. The plugin never creates or opens sessions and never changes DSH workspace membership.
 
@@ -32,7 +32,17 @@ npm run check
 npm pack --dry-run
 ```
 
-The package contains workbench.json, client/server code, city data and samples. The host's plugin installer loads the provider, then its registration appears in the local market. GitHub submission, per-version review and remote publishing belong to the later market workflow.
+The package contains client/server code, city data, and samples. `workbench.json` remains only for older tooling; the current market contract uses `package.json`, runtime registration, and genuine screenshots in this repository. The host plugin installer loads the provider, after which Desktop can merge it with the market entry. Public listing still requires a separate directory pull request to `awesome-dsh-workbench`.
+
+The current market metadata draft lives at [`docs/market-entry.yml`](docs/market-entry.yml). It supports source review and the later directory submission; Desktop does not read it as runtime configuration.
+
+## Screenshots
+
+![3D map and site candidates](docs/screenshots/site-map.png)
+
+![Site detail and scoring evidence](docs/screenshots/site-detail.png)
+
+![Reference baseline and metric distribution](docs/screenshots/site-reference.png)
 
 ## Data and capability boundaries
 
@@ -175,6 +185,6 @@ Code is MIT ([LICENSE](./LICENSE)).
 The geographic data under `src/data/` is a derivative database of OpenStreetMap, licensed **ODbL 1.0, which is share-alike**.
 © OpenStreetMap contributors. Read [DATA-LICENSE.md](./DATA-LICENSE.md) before redistributing or commercializing.
 
-## Initial draft (1.1.2)
+## Initial draft (1.2.0)
 
 Creating or first associating business data automatically prepares the original onboarding text in the native draft for user review and sending; it never submits a model request. Without a native session, the text is queued until that business context has an active owned session. Delivery occurs once per session/business pair. Existing plain text is preserved; rich references and in-flight drafts defer insertion and retry when ready. Pending text and delivery records survive reload in localStorage for the current Desktop origin; clearing browser storage removes these records.

@@ -17,9 +17,9 @@ DSH (DeepSeek Harness) 插件。**在真实三维城市地图上点任意位置�
 - **踩点闭环** — 待看 → 看过 → 上会中 → 签约 / 否决，每一步在列表里一键推进；定案有记录、能撤回
 - **换城市一条命令** — `fetch-city.mjs` 建好数据集，重启即可用，不改代码
 
-## Desktop 工作台规范（1.1.0）
+## Desktop 工作台适配（1.2.0）
 
-需要带本地工作台市场的 DSH Desktop（desktopWorkbenches 0.1.x、Harness 0.1.5-rc.2 兼容接口）。安装提供方插件后，在「工作台市场」添加并打开「门店选址」，入口固定和切换由 Desktop 管理。本仓库保持 private；本地打包不代表已经发布到 npm 或远程市场。
+需要提供 `desktopWorkbenches.register`、`isActive` 与 `ownsSession` 的 DSH Desktop。安装提供方插件后，在「工作台市场」添加并打开「门店选址」，入口固定、仓库身份和会话归属由 Desktop 管理。运行时 ID 为 `wb-dataelement-dsh-site-selection`；市场条目通过 `legacyWorkbenchIds: [site-selection]` 授权 Desktop 把旧安装的状态、收藏和会话归属迁移到仓库身份。
 
 业务区域默认在左侧占 65%，可折叠；右侧保留唯一的原生 Agent 会话。插件不覆盖侧边栏、设置、模式切换和公共导航，不创建或跳转会话，也不修改 DSH 工作区。模式、模型、工具和权限遵循当前原生会话。
 
@@ -34,7 +34,17 @@ npm run check
 npm pack --dry-run
 ```
 
-包包含 `workbench.json`、客户端、服务端、城市数据与样例。插件加载由宿主插件安装机制完成；注册后才出现在本地市场。Github 提交、逐版本审核和远程上架属于后续市场流程。
+包包含客户端、服务端、城市数据与样例。`workbench.json` 仅保留给旧版工具读取；现行市场以 `package.json`、运行时注册和仓库中的真实截图为准。插件加载由宿主插件安装机制完成；注册后才可与市场条目合并。公开市场收录仍需在 `awesome-dsh-workbench` 单独提交目录 PR。
+
+现行市场元数据草案见 [`docs/market-entry.yml`](docs/market-entry.yml)。该文件用于源仓库审查和后续目录投稿，不会被 Desktop 当成运行时配置。
+
+## 界面截图
+
+![三维地图与候选点位](docs/screenshots/site-map.png)
+
+![点位详情与评分依据](docs/screenshots/site-detail.png)
+
+![参照系与指标分布](docs/screenshots/site-reference.png)
 
 ## 数据和能力边界
 
@@ -177,6 +187,6 @@ npm run market        # 重新生成模拟商业数据
 `src/data/` 下的地理数据是 OpenStreetMap 衍生数据库，**ODbL 1.0，具有传染性**——
 © OpenStreetMap contributors。对外分发或商业化前请读 [DATA-LICENSE.md](./DATA-LICENSE.md)。
 
-## 开场白草稿（1.1.2）
+## 开场白草稿（1.2.0）
 
 创建或首次关联业务资料后，工作台会自动准备原版开场白并追加到原生会话草稿，由用户确认后发送，不会自动调用模型。尚无会话时先保存待准备内容；创建或打开对应会话后自动追加。同一会话与同一业务资料只准备一次。已有普通文字保留，引用卡片或正在提交的草稿会延后追加，待可用时重试。待准备内容与交付记录保存在当前 Desktop 来源的 localStorage，刷新后继续；清除浏览器存储会清除该记录。
